@@ -131,7 +131,7 @@ extern void usb_lld_set_feature (uint8_t feature);
 
 extern void usb_lld_set_data_to_send (const void *p, size_t len);
 
-extern inline void usb_lld_set_data_to_recv (void *p, size_t len)
+inline void usb_lld_set_data_to_recv (void *p, size_t len)
 {
   usb_lld_set_data_to_send ((const void *)p, len);
 }
