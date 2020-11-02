@@ -24,6 +24,7 @@
 #include "config.h"
 #include "ch.h"
 #include "hal.h"
+#include "chvt.h"
 #include "gnuk.h"
 #include "usb_lld.h"
 
@@ -101,6 +102,7 @@ struct ep_out {
 
 static struct ep_out endpoint_out;
 static struct ep_in endpoint_in;
+static struct ep_in endpoint_interrupt_in;
 
 static void epo_init (struct ep_out *epo, int ep_num,
 		      void (*notify) (struct ep_out *epo), void *priv)
@@ -195,6 +197,7 @@ struct ccid {
   /* lower layer */
   struct ep_out *epo;
   struct ep_in *epi;
+  struct ep_in *epi_intr;
 
   /* upper layer */
   struct apdu *a;
@@ -241,7 +244,7 @@ static void ccid_reset (struct ccid *c)
   c->a->expected_res_size = 0;
 }
 
-static void ccid_init (struct ccid *c, struct ep_in *epi, struct ep_out *epo,
+static void ccid_init (struct ccid *c, struct ep_in *epi, struct ep_out *epo, struct ep_in *epi_intr,
 		       struct apdu *a, Thread *t)
 {
   icc_state_p = &c->icc_state;
@@ -261,6 +264,7 @@ static void ccid_init (struct ccid *c, struct ep_in *epi, struct ep_out *epo,
   c->application = NULL;
   c->epi = epi;
   c->epo = epo;
+  c->epi_intr = epi_intr;
   c->a = a;
 }
 
@@ -303,7 +307,7 @@ static void apdu_init (struct apdu *a)
 #define EV_RX_DATA_READY (eventmask_t)1  /* USB Rx data available  */
 /* EV_EXEC_FINISHED == 2 */
 #define EV_TX_FINISHED (eventmask_t)4  /* USB Tx finished  */
-
+#define EV_TX_INTR_FINISHED (eventmask_t)8
 
 static void notify_tx (struct ep_in *epi)
 {
@@ -397,6 +401,18 @@ EP1_IN_Callback (void)
     }
 }
 
+void EP2_IN_Callback(void)
+{
+  struct ep_in *epi_intr = &endpoint_interrupt_in;
+  epi_intr->notify(epi_intr);
+}
+
+static void notify_icc_intr(struct ep_in* epi_intr)
+{
+  struct ccid *c = (struct ccid *)epi_intr->priv;
+
+  chEvtSignalI (c->icc_thread, EV_TX_INTR_FINISHED);
+}
 
 static void notify_icc (struct ep_out *epo)
 {
@@ -1295,6 +1311,7 @@ USBthread (void *arg)
 {
   struct ep_in *epi = &endpoint_in;
   struct ep_out *epo = &endpoint_out;
+  struct ep_in *epi_intr = &endpoint_interrupt_in;
   struct ccid *c = &ccid;
   struct apdu *a = &apdu;
 
@@ -1302,20 +1319,39 @@ USBthread (void *arg)
 
   epi_init (epi, ENDP1, notify_tx, c);
   epo_init (epo, ENDP1, notify_icc, c);
-  ccid_init (c, epi, epo, a, chThdSelf ());
+  epi_init (epi_intr, ENDP2, notify_icc_intr, c);
+  ccid_init (c, epi, epo, epi_intr, a, chThdSelf ());
   apdu_init (a);
 
   chEvtClear (ALL_EVENTS);
 
   icc_prepare_receive (c);
+  systime_t time = chTimeNow();
+  int isCardIn = 1;
   while (1)
     {
       eventmask_t m;
+
+      if(chTimeNow() - time > MS2ST(10000))
+      {
+        time = chTimeNow();
+        isCardIn = !isCardIn;
+        if(!isCardIn)
+        {
+          ccid_reset(c);
+          icc_power_off(c);
+        }        
+        uint8_t card_status_msg[] = {0x50, isCardIn ? 0x03 : 0x02};
+        usb_lld_write(epi_intr->ep_num, card_status_msg, sizeof(card_status_msg));
+      }
 
       m = chEvtWaitOneTimeout (ALL_EVENTS, USB_ICC_TIMEOUT);
 
       if (m == EV_RX_DATA_READY)
 	c->icc_state = icc_handle_data (c);
+      else if (m == EV_TX_INTR_FINISHED)
+      {
+      }
       else if (m == EV_EXEC_FINISHED)
 	if (c->icc_state == ICC_STATE_EXECUTE)
 	  {

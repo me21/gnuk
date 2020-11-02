@@ -37,7 +37,7 @@ static const uint8_t gnukDeviceDescriptor[] = {
   0x01    /* bNumConfigurations */
 };
 
-#define ICC_TOTAL_LENGTH (9+9+54+7+7)
+#define ICC_TOTAL_LENGTH (9+9+54+7+7+7)
 #define ICC_NUM_INTERFACES 1
 
 #ifdef ENABLE_VIRTUAL_COM_PORT
@@ -85,7 +85,7 @@ static const uint8_t gnukConfigDescriptor[] = {
   USB_INTERFACE_DESCRIPTOR_TYPE, /* bDescriptorType: Interface */
   0,				 /* bInterfaceNumber: Index of this interface */
   0,			    /* Alternate setting for this interface */
-  2,			    /* bNumEndpoints: Bulk-IN, Bulk-OUT */
+  3,			    /* bNumEndpoints: Bulk-IN, Bulk-OUT, Interrupt-IN */
   USB_ICC_INTERFACE_CLASS,
   USB_ICC_INTERFACE_SUBCLASS,
   USB_ICC_INTERFACE_BULK_PROTOCOL,
@@ -156,6 +156,13 @@ static const uint8_t gnukConfigDescriptor[] = {
   0x02,				/* bmAttributes: Bulk */
   USB_ICC_DATA_SIZE, 0x00,	/* wMaxPacketSize: */
   0x00,				/* bInterval */
+  /*Endpoint IN2 Descriptor*/
+  7,			       /* bLength: Endpoint Descriptor size */
+  USB_ENDPOINT_DESCRIPTOR_TYPE,	/* bDescriptorType: Endpoint */
+  0x82,				/* bEndpointAddress: (IN2) */
+  0x03,				/* bmAttributes: Interrupt */
+  8, 0x00,      /* wMaxPacketSize: */
+  5,				/* bInterval */
 #ifdef ENABLE_VIRTUAL_COM_PORT
   /* Interface Descriptor */
   9,			      /* bLength: Interface Descriptor size */

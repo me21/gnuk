@@ -97,13 +97,17 @@ gnuk_setup_endpoints_for_interface (uint16_t interface, int stop)
 {
   if (interface == 0)
     {
-      if (!stop)
+      if (!stop) {
 	usb_lld_setup_endpoint (ENDP1, EP_BULK, 0, ENDP1_RXADDR, ENDP1_TXADDR,
 				GNUK_MAX_PACKET_SIZE);
+	usb_lld_setup_endpoint (ENDP2, EP_INTERRUPT, 0, ENDP2_RXADDR, ENDP2_TXADDR,
+				8);
+      }
       else
 	{
 	  usb_lld_stall_rx (ENDP1);
 	  usb_lld_stall_tx (ENDP1);
+    usb_lld_stall_tx (ENDP2);
 	}
     }
 #ifdef ENABLE_VIRTUAL_COM_PORT
