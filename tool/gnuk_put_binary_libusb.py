@@ -104,7 +104,7 @@ if __name__ == '__main__':
     else:
         fileid = 5              # Card holder certificate
         filename = sys.argv[1]
-        f = open(filename)
+        f = open(filename, "rb")
         data = f.read()
         f.close()
         print "%s: %d" % (filename, len(data))

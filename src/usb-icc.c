@@ -1326,24 +1326,24 @@ USBthread (void *arg)
   chEvtClear (ALL_EVENTS);
 
   icc_prepare_receive (c);
-  systime_t time = chTimeNow();
-  int isCardIn = 1;
+  // systime_t time = chTimeNow();
+  // int isCardIn = 1;
   while (1)
     {
       eventmask_t m;
 
-      if(chTimeNow() - time > MS2ST(10000))
-      {
-        time = chTimeNow();
-        isCardIn = !isCardIn;
-        if(!isCardIn)
-        {
-          ccid_reset(c);
-          icc_power_off(c);
-        }        
-        uint8_t card_status_msg[] = {0x50, isCardIn ? 0x03 : 0x02};
-        usb_lld_write(epi_intr->ep_num, card_status_msg, sizeof(card_status_msg));
-      }
+      // if(chTimeNow() - time > MS2ST(10000))
+      // {
+      //   time = chTimeNow();
+      //   isCardIn = !isCardIn;
+      //   if(!isCardIn)
+      //   {
+      //     ccid_reset(c);
+      //     icc_power_off(c);
+      //   }        
+      //   uint8_t card_status_msg[] = {0x50, isCardIn ? 0x03 : 0x02};
+      //   usb_lld_write(epi_intr->ep_num, card_status_msg, sizeof(card_status_msg));
+      // }
 
       m = chEvtWaitOneTimeout (ALL_EVENTS, USB_ICC_TIMEOUT);
 
