@@ -1326,11 +1326,18 @@ USBthread (void *arg)
   chEvtClear (ALL_EVENTS);
 
   icc_prepare_receive (c);
+  uint32_t device_state = ATTACHED;
   // systime_t time = chTimeNow();
   // int isCardIn = 1;
   while (1)
     {
       eventmask_t m;
+
+      if((device_state != CONFIGURED) && (bDeviceState == CONFIGURED)) {
+        uint8_t card_status_msg[] = {0x50, 0x03};
+        usb_lld_write(epi_intr->ep_num, card_status_msg, sizeof(card_status_msg));
+      }
+      device_state = bDeviceState;
 
       // if(chTimeNow() - time > MS2ST(10000))
       // {
