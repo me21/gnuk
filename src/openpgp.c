@@ -38,6 +38,7 @@
 #define P2(a) a.cmd_apdu_head[3]
 
 #define INS_VERIFY        			0x20
+#define INS_MSE                 0x22
 #define INS_CHANGE_REFERENCE_DATA		0x24
 #define INS_PSO		  			0x2a
 #define INS_RESET_RETRY_COUNTER			0x2c
@@ -125,6 +126,44 @@ get_pinpad_input (int msg_code)
   return r;
 }
 #endif
+
+static enum kind_of_key selected_key_for_pso = GPG_KEY_FOR_DECRYPTION;
+static void
+cmd_mse (void)
+{
+  int len;
+  uint8_t p1 = P1 (apdu);
+  uint8_t p2 = P2 (apdu);
+  int r;
+  const uint8_t *pw;
+
+  DEBUG_INFO (" - MSE\r\n");
+  DEBUG_BYTE (p1);
+  DEBUG_BYTE (p2);
+
+  if (p1 != 0x41)
+  {
+    GPG_BAD_P1_P2 ();
+    return;
+  }
+
+  len = apdu.cmd_apdu_data_len;
+  pw = apdu.cmd_apdu_data;
+
+  if(len != 3) {
+	  DEBUG_INFO (" wrong length: ");
+	  DEBUG_SHORT (len);
+	  GPG_ERROR ();
+  }
+  else
+  {
+    if(pw[2] == 0x02) // DEC-Key
+      selected_key_for_pso = GPG_KEY_FOR_DECRYPTION;
+    else // AUT-Key
+      selected_key_for_pso = GPG_KEY_FOR_AUTHENTICATION;
+    GPG_SUCCESS();
+  }
+}
 
 static void
 cmd_verify (void)
@@ -798,7 +837,7 @@ cmd_pso (void)
   else if (P1 (apdu) == 0x80 && P2 (apdu) == 0x86)
     {
       DEBUG_SHORT (len);
-      DEBUG_BINARY (&kd[GPG_KEY_FOR_DECRYPTION], KEY_CONTENT_LEN);
+      DEBUG_BINARY (&kd[selected_key_for_pso], KEY_CONTENT_LEN);
 
       if (!ac_check_status (AC_OTHER_AUTHORIZED))
 	{
@@ -814,7 +853,7 @@ cmd_pso (void)
       else
 	{
 	  r = rsa_decrypt (apdu.cmd_apdu_data+1, res_APDU, len,
-			   &kd[GPG_KEY_FOR_DECRYPTION]);
+			   &kd[selected_key_for_pso]);
 	  if (r < 0)
 	    GPG_ERROR ();
 	}
@@ -1074,6 +1113,7 @@ struct command
 };
 
 const struct command cmds[] = {
+  { INS_MSE, cmd_mse },
   { INS_VERIFY, cmd_verify },
   { INS_CHANGE_REFERENCE_DATA, cmd_change_password },
   { INS_PSO, cmd_pso },

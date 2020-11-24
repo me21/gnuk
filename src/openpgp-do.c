@@ -117,8 +117,10 @@ static const uint8_t extended_capabilities[] __attribute__ ((aligned (1))) = {
 #endif
   /* Max. length of command APDU data */
   0x00, 0xff,
-  /* Max. length of response APDU data */
-  0x01, 0x00,
+  /* Pin block 2 format unsupported */
+  0x00, 
+  /* MSE command supported */
+  0x01,
 };
 
 /* Algorithm Attributes */
@@ -439,7 +441,7 @@ const uint8_t openpgpcard_aid[] = {
   0xd2, 0x76,		    /* D: National, 276: DEU ISO 3166-1 */
   0x00, 0x01, 0x24,	    /* Registered Application Provider Identifier */
   0x01,			    /* Application: OpenPGPcard */
-  0x02, 0x00,		    /* Version 2.0 */
+  0x03, 0x03,		    /* Version 3.3 */
   /* v. id */ /*   serial number   */
   0xff, 0xff, 0xff, 0xff,  0xff, 0xff, /* To be overwritten */
 };
